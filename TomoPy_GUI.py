@@ -754,12 +754,12 @@ class APS_13BM(wx.Frame):
                                  flat=self.flat,
                                  dark=self.dark,
                                  ncore = self.ncore)
-        print('data after minus_log are ', self.data.max(), self.data.min())
+        print('data after tp.normalize are ', self.data.max(), self.data.min())
         ## Additional normalization using the 10 outter most air pixels.
         if self.cb == True:
             self.data = tp.normalize_bg(self.data,
                                         air = 10)
-        print('data after minus_log are ', self.data.max(), self.data.min())
+        print('data after tp.normalize_bg are ', self.data.max(), self.data.min())
         ## Allows user to pad sinogram.
         if self.pad_size != 0:
             self.npad = 0
