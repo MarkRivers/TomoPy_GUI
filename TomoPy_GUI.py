@@ -475,7 +475,7 @@ class APS_13BM(wx.Frame):
         rightSizer.Add(wx.StaticLine(self.panel), 0, wx.ALL|wx.EXPAND, 5)
         rightSizer.Add(comp_opt_title_Sizer, 0, wx.ALL|wx.EXPAND, 5)
         rightSizer.Add(comp_opt_cores_n_chunks_Sizer, 0, wx.ALL|wx.EXPAND, 5)
-        
+        ''
         '''
         Adding left and right sizers to main sizer.
         '''
