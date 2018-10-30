@@ -518,6 +518,10 @@ class APS_13BM(wx.Frame):
                         ## Entries 1 and 3 of fname list are flat fields.
                         ## Read in second entry (fname[1]), which houses the data.
                         self.data, self.flat, self.dark, self.theta = dx.exchange.read_aps_13bm(_fname,format='netcdf4')
+                        self.data = self.data*1.
+                        ## Change the data from netcdf3 int16 to what is perceived as uint16.
+                        self.data[np.where(self.data < 0)] = 2**16 + self.data[np.where(self.data < 0)]
+                        print('replaced wrapped data are ', self.data.shape, self.data.max(), self.data.min())
                         ## Storing the dimensions for updating GUI.
                         self.sx = self.data.shape[2]
                         self.sy = self.data.shape[1]
@@ -729,24 +733,10 @@ class APS_13BM(wx.Frame):
         self.status_ID.SetLabel('Preprocessing')
         ## Setting up timestamp.
         t0 = time.time()
-        ## Flats from APS 13BM are in seperate arrays. Average then delete.
-        self.flat = np.concatenate((self.flat1, self.flat2),axis=0)
-        del self.flat1
-        del self.flat2
-        self.data = self.data
-        self.flat = self.flat
-        ## Only single value is collected for dark current from APS 13BM.
-        ## Create array of same size for normalizing.
-        self.dark = float(self.dark_ID.GetValue())
-        self.dark = self.flat*0+self.dark
         ## Pull user specified processing power.
         self.nchunk = int(self.nchunk_blank.GetValue())
         self.ncore = int(self.ncore_blank.GetValue())
-        ## Check for negative numbers, which idicates the detector saturated and values wrapped.
         print('original data are ', self.data.shape, self.data.max(), self.data.min())
-        if self.data.min() < 0 :
-            self.data[np.where(self.data < 0)] = 2**16 + self.data[np.where(self.data < 0)]
-        print('replaced wrapped data are ', self.data.shape, self.data.max(), self.data.min())
         ## Normalize via flats and darks.
         ## First normalization using flats and dark current.
         self.data = tp.normalize(self.data,
