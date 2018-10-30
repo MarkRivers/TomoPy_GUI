@@ -59,16 +59,19 @@ def fix_darwin_exe(script):
 if len(sys.argv) > 1 and (sys.argv[1] == 'install'):
     bindir = 'bin'
     pyexe = os.path.join(sys.prefix, bindir, 'python')
-    if os.uname == 'win':
+    plat = sys.platform.lower()
+    if plat.startswith('win'):
         pyexe = os.path.join(sys.prefix, 'python.exe')
         bindir = 'Scripts'
 
     for script, func in apps:
         fullscript = os.path.join(sys.prefix, bindir, script)
-        if (sys.platform.lower().startswith('darwin') and 'Anaconda' in sys.version):
+        if (plat.startswith('darwin') and 'Anaconda' in sys.version):
             fix_darwin_exe(fullscript)
-        elif sys.platform.lower().startswith('linux'):
+        elif plat.startswith('linux'):
             os.chmod(fullscript, 493)
+        elif plat.startswith('win'):
+            fullscript = fullscript + '-script.pyw'
 
         time.sleep(0.25)
         ret = subprocess.check_call((pyexe, fullscript, '-s'))

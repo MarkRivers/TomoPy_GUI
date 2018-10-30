@@ -1321,11 +1321,13 @@ def tomopy_13bmapp():
         except ImportError:
             print("cannot make desktop short with `pyshortcuts`")
             return
-
-        icoext = 'icns' if sys.platform=='darwin' else 'ico'
-        bindir = 'Scripts' if os.name=='win' else 'bin'
+        plat = sys.platform.lower()
+        icoext = 'icns' if plat.startswith('darwin') else 'ico'
+        bindir = 'Scripts' if plat.startswith('win') else 'bin'
 
         script = os.path.join(sys.prefix, bindir, 'tomopy_13bmapp')
+        if plat.startswith('win'):
+            script = script + '-script.pyw'
 
         thisfolder, _ = os.path.split(__file__)
         icon = os.path.join(thisfolder, 'icons', 'pie.%s' % icoext )
