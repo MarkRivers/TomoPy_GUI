@@ -522,6 +522,7 @@ class APS_13BM(wx.Frame):
                         self.sx = self.data.shape[2]
                         self.sy = self.data.shape[1]
                         self.sz = self.data.shape[0]
+                        dark = self.dark[0,0,0]
                         self.data_min = self.data.min()
                         self.data_max = self.data.max()
                         ## Updating the GUI.
@@ -531,7 +532,7 @@ class APS_13BM(wx.Frame):
                                          sx=self.sx,
                                          sy=self.sy,
                                          sz=self.sz,
-                                         dark=self.dark,
+                                         dark=dark,
                                          data_max=self.data_max,
                                          data_min=self.data_min)
                         ## Updating the Centering Parameters Defaults for the dataset.
@@ -563,7 +564,13 @@ class APS_13BM(wx.Frame):
                         self.dark = 'NA'
                         self.data_min = self.data.min()
                         self.data_max = self.data.max()
-                        self.update_info(path=_path, fname=self._fname, sx=self.sx, sy=self.sy, sz=self.sz, dark=self.dark, data_max=self.data_max, data_min=self.data_min)
+                        self.update_info(path=_path,
+                            fname=self._fname,
+                            sx=self.sx, sy=self.sy,
+                            sz=self.sz,
+                            dark=self.dark,
+                            data_max=self.data_max,
+                            data_min=self.data_min)
                         self.status_ID.SetLabel('Data Imported')
                         ## Time stamping.
                         t1 = time.time()
@@ -588,7 +595,7 @@ class APS_13BM(wx.Frame):
         if fname is not None:
             self.file_ID.SetLabel(fname)
         if dark is not None:
-            self.dark_ID.SetLabel(str(self.dark))
+            self.dark_ID.SetLabel(str(dark))
         if data_max is not None:
             self.data_max_ID.SetLabel(str(self.data_max))
         if data_min is not None:
@@ -736,20 +743,22 @@ class APS_13BM(wx.Frame):
         self.nchunk = int(self.nchunk_blank.GetValue())
         self.ncore = int(self.ncore_blank.GetValue())
         ## Check for negative numbers, which idicates the detector saturated and values wrapped.
+        print('original data are ', self.data.shape, self.data.max(), self.data.min())
         if self.data.min() < 0 :
             self.data[np.where(self.data < 0)] = 2**16 + self.data[np.where(self.data < 0)]
+        print('replaced wrapped data are ', self.data.shape, self.data.max(), self.data.min())
         ## Normalize via flats and darks.
         ## First normalization using flats and dark current.
         self.data = tp.normalize(self.data,
                                  flat=self.flat,
                                  dark=self.dark,
                                  ncore = self.ncore)
-
+        print('post-normalization data are ', self.data.shape, self.data.max(), self.data.min())
         ## Additional normalization using the 10 outter most air pixels.
         if self.cb == True:
             self.data = tp.normalize_bg(self.data,
                                         air = 10)
-        print('data after tp.normalize_bg are ', self.data.max(), self.data.min())
+            print('post bg normalization data are ', self.data.shape, self.data.max(), self.data.min())
         ## Allows user to pad sinogram.
         if self.pad_size != 0:
             self.npad = 0
@@ -766,9 +775,11 @@ class APS_13BM(wx.Frame):
         del self.dark
         ## Scale data for I0 as 0.
         tp.minus_log(self.data, out = self.data)
+        print('minus_logged data are ', self.data.shape, self.data.max(), self.data.min())
         self.data = tp.remove_nan(self.data,
                                   val = 0.,
                                   ncore = self.ncore)
+        print('removed nan data are ', self.data.shape, self.data.max(), self.data.min())
         self.data_max = self.data.max()
         self.data_min = self.data.min()
         ## Updates GUI. Variables set to None don't update in self.update_info methods
