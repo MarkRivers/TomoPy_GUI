@@ -503,38 +503,21 @@ class APS_13BM(wx.Frame):
             t0 = time.time()
             ## Loading path and updating status label on GUI.
             path = fileDialog.GetPath()
-            self.status_ID.SetLabel('Please wait. Reading in the data.')
             ## Loading in file that was just chosen by user.
             try:
                 with open(path, 'r') as file:
                     fname = file
                     _path, _fname = os.path.split(path)
                     self.fname1 = file
+                    self.status_ID.SetLabel('Please wait. Reading in the data.')
                     if _fname.endswith('.nc'):
                         '''
                         Reading in .nc files. APS 13BM format.
                         Reads in 2 flats (.nc), .setup, and data (.nc).
                         '''
-                        ## Gather list of all .nc files sharing same fname string.
-                        fname = glob.glob(_fname[0:-5]+"*[1-3].nc")
                         ## Entries 1 and 3 of fname list are flat fields.
                         ## Read in second entry (fname[1]), which houses the data.
-                        self.data = dx.exchange.read_aps_13bm(fname[1],format='netcdf4')
-                        print('read in data', self.data.shape)
-                        ## Read .setup file, convert lines to rows, identify dark current.
-                        setup = glob.glob(_fname[0:-5]+"*.setup")
-                        setup = open(setup[0], 'r')
-                        setup_data = setup.readlines()
-                        result = {}
-                        for line in setup_data:
-                            words = line[:-1].split(':',1)
-                            result[words[0].lower()] = words[1]
-                        self.dark = float(result['dark_current'])
-                        ## Read in both flat field files.
-                        self.flat1 = dx.exchange.read_aps_13bm(fname[0],format = 'netcdf4')
-                        self.flat2 = dx.exchange.read_aps_13bm(fname[2],format = 'netcdf4')
-                        ## Storing angles.
-                        self.theta = tp.angles(self.data.shape[0])
+                        self.data, self.flat, self.dark, self.theta = dx.exchange.read_aps_13bm(_fname,format='netcdf4')
                         ## Storing the dimensions for updating GUI.
                         self.sx = self.data.shape[2]
                         self.sy = self.data.shape[1]
@@ -561,7 +544,7 @@ class APS_13BM(wx.Frame):
                         t1 = time.time()
                         total = t1-t0
                         print('Time reading in files ', total)
-                        setup.close()
+
                     if _fname.endswith('.volume'):
                         '''
                         Reads in .volume files generated from tomoRecon.
@@ -753,14 +736,15 @@ class APS_13BM(wx.Frame):
         self.nchunk = int(self.nchunk_blank.GetValue())
         self.ncore = int(self.ncore_blank.GetValue())
         ## Check for negative numbers, which idicates the detector saturated and values wrapped.
-        self.data = self.data[np.where(self.data<0)] = 2**16+self.data[np.where(self.data<0)]
+        if self.data.min() < 0 :
+            self.data[np.where(self.data < 0)] = 2**16 + self.data[np.where(self.data < 0)]
         ## Normalize via flats and darks.
         ## First normalization using flats and dark current.
         self.data = tp.normalize(self.data,
                                  flat=self.flat,
                                  dark=self.dark,
                                  ncore = self.ncore)
-        print('data after tp.normalize are ', self.data.max(), self.data.min())
+
         ## Additional normalization using the 10 outter most air pixels.
         if self.cb == True:
             self.data = tp.normalize_bg(self.data,
