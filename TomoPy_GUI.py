@@ -750,6 +750,9 @@ class APS_13BM(wx.Frame):
         self.nchunk = int(self.nchunk_blank.GetValue())
         self.ncore = int(self.ncore_blank.GetValue())
         ## First normalization using flats and dark current.
+        ## Check for negative numbers, which idicates the detector saturated and values wrapped.
+        self.data = self.data[np.where(self.data<0)] = 2**16+self.data[np.where(self.data<0)]
+        ## Normalize via flats and darks.
         self.data = tp.normalize(self.data,
                                  flat=self.flat,
                                  dark=self.dark,
