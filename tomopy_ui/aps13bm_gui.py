@@ -24,10 +24,12 @@ Updates:
 '''
 ## Importing packages.
 import wx
+import sys
 import os
 import glob
 import gc
 import time
+from optparse import OptionParser
 import scipy
 import skimage
 
@@ -475,6 +477,7 @@ class APS_13BM(wx.Frame):
         rightSizer.Add(wx.StaticLine(self.panel), 0, wx.ALL|wx.EXPAND, 5)
         rightSizer.Add(comp_opt_title_Sizer, 0, wx.ALL|wx.EXPAND, 5)
         rightSizer.Add(comp_opt_cores_n_chunks_Sizer, 0, wx.ALL|wx.EXPAND, 5)
+
         '''
         Adding left and right sizers to main sizer.
         '''
@@ -749,10 +752,10 @@ class APS_13BM(wx.Frame):
         ## Pull user specified processing power.
         self.nchunk = int(self.nchunk_blank.GetValue())
         self.ncore = int(self.ncore_blank.GetValue())
-        ## First normalization using flats and dark current.
         ## Check for negative numbers, which idicates the detector saturated and values wrapped.
         self.data = self.data[np.where(self.data<0)] = 2**16+self.data[np.where(self.data<0)]
         ## Normalize via flats and darks.
+        ## First normalization using flats and dark current.
         self.data = tp.normalize(self.data,
                                  flat=self.flat,
                                  dark=self.dark,
@@ -779,7 +782,6 @@ class APS_13BM(wx.Frame):
         del self.dark
         ## Scale data for I0 as 0.
         tp.minus_log(self.data, out = self.data)
-        print('data after minus_log are ', self.data.max(), self.data.min())
         self.data = tp.remove_nan(self.data,
                                   val = 0.,
                                   ncore = self.ncore)
@@ -1303,11 +1305,37 @@ class APS_13BM(wx.Frame):
         self.stop_movie.Disable()
         self.status_ID.SetLabel('Movie finished.')
 
-'''
-Mainloop of the GUI.
-'''
+def tomopy_13bmapp():
+    "run APS13 BM TomoPy GUI"
+    usage = "usage: %prog [options] file(s)"
+    parser = OptionParser(usage=usage, prog="tomopy_13bmapp",  version="1.0")
+
+    parser.add_option("-s", "--shortcut", dest="shortcut", action="store_true",
+                      default=False, help="create desktop shortcut")
+    (options, args) = parser.parse_args()
+
+    # create desktop shortcut
+    if options.shortcut:
+        try:
+            from pyshortcuts import make_shortcut
+        except ImportError:
+            print("cannot make desktop short with `pyshortcuts`")
+            return
+
+        icoext = 'icns' if sys.platform=='darwin' else 'ico'
+        bindir = 'Scripts' if os.name=='win' else 'bin'
+
+        script = os.path.join(sys.prefix, bindir, 'tomopy_13bmapp')
+
+        thisfolder, _ = os.path.split(__file__)
+        icon = os.path.join(thisfolder, 'icons', 'pie.%s' % icoext )
+        make_shortcut(script, name='TomoPy_13BM', icon=icon, terminal=False)
+
+    else:
+        app = wx.App()
+        f = APS_13BM(None, -1)
+        f.Show(True)
+        app.MainLoop()
+
 if __name__ == '__main__':
-    app = wx.App()
-    f = APS_13BM(None,-1)
-    f.Show(True)
-    app.MainLoop()
+    aps13bm_app()
