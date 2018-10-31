@@ -517,11 +517,14 @@ class APS_13BM(wx.Frame):
                         '''
                         ## Entries 1 and 3 of fname list are flat fields.
                         ## Read in second entry (fname[1]), which houses the data.
-                        self.data, self.flat, self.dark, self.theta = dx.exchange.read_aps_13bm(_fname,format='netcdf4')
-                        self.data = self.data*1.
+                        self.status_ID.SetLabel('Please wait. Reading in the data.')
+                        data, self.flat, self.dark, self.theta = dx.exchange.read_aps_13bm(_fname,format='netcdf4')
+                        ## Turn to float so that the next line can replace wrapped values.
+                        self.data = np.zeros(data.shape)
+                        self.data[:] = data
+                        del data
                         ## Change the data from netcdf3 int16 to what is perceived as uint16.
-                        self.data[np.where(self.data < 0)] = 2**16 + self.data[np.where(self.data < 0)]
-                        print('replaced wrapped data are ', self.data.shape, self.data.max(), self.data.min())
+                        self.data[np.where(self.data < 0)] = (2**16 + self.data[np.where(self.data < 0)])
                         ## Storing the dimensions for updating GUI.
                         self.sx = self.data.shape[2]
                         self.sy = self.data.shape[1]
@@ -736,19 +739,23 @@ class APS_13BM(wx.Frame):
         ## Pull user specified processing power.
         self.nchunk = int(self.nchunk_blank.GetValue())
         self.ncore = int(self.ncore_blank.GetValue())
-        print('original data are ', self.data.shape, self.data.max(), self.data.min())
+        print('uint16 data are ', self.data.shape, self.data.max(), self.data.min())
+        # ## Normalizing the largest value to make 0 to 1.
+        # self.data = (self.data / self.data.max())
+        print('data / data max are ', self.data.shape, self.data.max(), self.data.min())
         ## Normalize via flats and darks.
         ## First normalization using flats and dark current.
-        self.data = tp.normalize(self.data,
-                                 flat=self.flat,
-                                 dark=self.dark,
-                                 ncore = self.ncore)
-        print('post-normalization data are ', self.data.shape, self.data.max(), self.data.min())
+        tp.normalize(self.data,
+                     flat=self.flat,
+                     dark=self.dark,
+                     ncore = self.ncore,
+                     out = self.data)
+        print('post tp-normalization data are ', self.data.shape, self.data.max(), self.data.min())
         ## Additional normalization using the 10 outter most air pixels.
         if self.cb == True:
             self.data = tp.normalize_bg(self.data,
                                         air = 10)
-            print('post bg normalization data are ', self.data.shape, self.data.max(), self.data.min())
+            print('post background norm data are ', self.data.shape, self.data.max(), self.data.min())
         ## Allows user to pad sinogram.
         if self.pad_size != 0:
             self.npad = 0
@@ -764,6 +771,8 @@ class APS_13BM(wx.Frame):
         ## Delete dark field array as we no longer need it.
         del self.dark
         ## Scale data for I0 as 0.
+        self.data[np.where(self.data < 0)] = (1**-6 + self.data[np.where(self.data < 0)])
+        print('just before minus_logged data are ', self.data.shape, self.data.max(), self.data.min())
         tp.minus_log(self.data, out = self.data)
         print('minus_logged data are ', self.data.shape, self.data.max(), self.data.min())
         self.data = tp.remove_nan(self.data,
