@@ -543,7 +543,7 @@ class APS_13BM(wx.Frame):
                         self.sx = self.data.shape[2]
                         self.sy = self.data.shape[1]
                         self.sz = self.data.shape[0]
-                        
+
                         self.data_min = self.data.min()
                         self.data_max = self.data.max()
                         ## Updating the GUI.
@@ -553,7 +553,7 @@ class APS_13BM(wx.Frame):
                                          sx=self.sx,
                                          sy=self.sy,
                                          sz=self.sz,
-                                         dark=dark,
+                                         dark=self.dark,
                                          data_max=self.data_max,
                                          data_min=self.data_min)
                         ## Updating the Centering Parameters Defaults for the dataset.
