@@ -517,14 +517,28 @@ class APS_13BM(wx.Frame):
                         '''
                         ## Entries 1 and 3 of fname list are flat fields.
                         ## Read in second entry (fname[1]), which houses the data.
+                        fname = glob.glob(_fname[0:-5]+'*[1-3].nc')
                         self.status_ID.SetLabel('Please wait. Reading in the data.')
-                        data, self.flat, self.dark, self.theta = dx.exchange.read_aps_13bm(_fname,format='netcdf4')
+                        data = dx.exchange.read_aps_13bm(fname[1],format='netcdf4')
+                        self.flat1 = dx.exchange.read_aps_13bm(fname[0], format = 'netcdf4')
+                        self.flat2 = dx.exchange.read_aps_13bm(fname[2], format = 'netcdf4')
+                        self.flat = np.concatenate((self.flat1, self.flat2),axis = 0)
+                        self.theta = tp.angles(data.shape[0])
                         ## Turn to float so that the next line can replace wrapped values.
                         self.data = np.zeros(data.shape)
                         self.data[:] = data
                         del data
                         ## Change the data from netcdf3 int16 to what is perceived as uint16.
                         self.data[np.where(self.data < 0)] = (2**16 + self.data[np.where(self.data < 0)])
+                        ## Read .setup file, convert lines to rows, identify dark current.
+                        setup = glob.glob(_fname[0:-5]+"*.setup")
+                        setup = open(setup[0], 'r')
+                        setup_data = setup.readlines()
+                        result = {}
+                        for line in setup_data:
+                            words = line[:-1].split(':',1)
+                            result[words[0].lower()] = words[1]
+                        self.dark = float(result['dark_current'])
                         ## Storing the dimensions for updating GUI.
                         self.sx = self.data.shape[2]
                         self.sy = self.data.shape[1]
