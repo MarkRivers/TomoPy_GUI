@@ -543,7 +543,7 @@ class APS_13BM(wx.Frame):
                         self.sx = self.data.shape[2]
                         self.sy = self.data.shape[1]
                         self.sz = self.data.shape[0]
-                        dark = self.dark[0,0,0]
+                        
                         self.data_min = self.data.min()
                         self.data_max = self.data.max()
                         ## Updating the GUI.
