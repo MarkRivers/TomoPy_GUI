@@ -523,7 +523,7 @@ class APS_13BM(wx.Frame):
                         self.data = np.zeros(data.shape)
                         self.data[:] = data
                         del data
-                        ## Change the data from netcdf3 int16 to what is perceived as uint16.
+                        ## Fix any wrapped values from oversaturation or file saving.
                         self.data[np.where(self.data < 0)] = (2**16 + self.data[np.where(self.data < 0)])
                         ## Storing the dimensions for updating GUI.
                         self.sx = self.data.shape[2]
@@ -539,7 +539,7 @@ class APS_13BM(wx.Frame):
                                          sx=self.sx,
                                          sy=self.sy,
                                          sz=self.sz,
-                                         dark=self.dark,
+                                         dark=dark,
                                          data_max=self.data_max,
                                          data_min=self.data_min)
                         ## Updating the Centering Parameters Defaults for the dataset.
