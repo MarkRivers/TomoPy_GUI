@@ -503,6 +503,9 @@ class APS_13BM(wx.Frame):
             t0 = time.time()
             ## Loading path and updating status label on GUI.
             path = fileDialog.GetPath()
+            ## Opening text file to save parameters for batch reconstruction.
+            self.logfile = open('logfile.txt','w')
+            self.logfile.write('import tomopy\nimport dxchange\nimport numpy as np\n')
             ## Loading in file that was just chosen by user.
             try:
                 with open(path, 'r') as file:
@@ -519,12 +522,16 @@ class APS_13BM(wx.Frame):
                         ## Read in second entry (fname[1]), which houses the data.
                         self.status_ID.SetLabel('Please wait. Reading in the data.')
                         data, self.flat, self.dark, self.theta = dx.exchange.read_aps_13bm(_fname,format='netcdf4')
+                        self.logfile.write("data, flat, dark, theta = dx.exchange.read_aps_13bm(_fname, format='netcdf4')\n")
                         ## Turn to float so that the next line can replace wrapped values.
                         self.data = np.zeros(data.shape)
                         self.data[:] = data
                         del data
+                        self.logfile.write('data = np.zeros(data.shape)\ndata[:]=data\ndel data\n')
                         ## Fix any wrapped values from oversaturation or file saving.
+                        self.flat[np.where(self.flat < 0)] = (2**16 + self.flat[np.where(self.flat < 0)])
                         self.data[np.where(self.data < 0)] = (2**16 + self.data[np.where(self.data < 0)])
+                        self.logfile.write('data[np.where(data <0)] = 2**16 + data[np.where(data <0)]\nflat[np.where(flat <0)] = 2**16 + flat[np.where(flat < 0)]\n')
                         ## Storing the dimensions for updating GUI.
                         self.sx = self.data.shape[2]
                         self.sy = self.data.shape[1]
@@ -562,6 +569,7 @@ class APS_13BM(wx.Frame):
                         data.close()
                         # Storing angles.
                         self.theta = tp.angles(self.data.shape[0])
+                        self.logfile.write('theta = tp.angles(data.shape[0])\n')
                         # Storing the dimensions for updating GUI.
                         self.sx = self.data.shape[2]
                         self.sy = self.data.shape[1]
@@ -696,8 +704,7 @@ class APS_13BM(wx.Frame):
         print('kernel size is ', ring_width)
         self.data = tp.prep.stripe.remove_stripe_sf(self.data,
                                                     size = ring_width)
-#                                                    ncore = self.ncore,
-#                                                    nchunk = self.nchunk)
+        self.logfile.write("tp.prep.stripe.remove_stripe_sf(data, size='ring_width')\n")
         t1 = time.time()
         print('made it through ring removal.', t1-t0)
         self.status_ID.SetLabel('Ring removed.')
@@ -724,6 +731,7 @@ class APS_13BM(wx.Frame):
                                       dif = self.zinger,
                                       size = size,
                                       ncore = self.ncore,)
+        self.logfile.write("tp.remove_outlier(data, dif = zinger, size = size, ncore = ncore)\n")
         t1 = time.time()
         print('Zingers removed: ', t1-t0)
         self.status_ID.SetLabel('Artifacts Removed.')
@@ -739,6 +747,8 @@ class APS_13BM(wx.Frame):
         ## Pull user specified processing power.
         self.nchunk = int(self.nchunk_blank.GetValue())
         self.ncore = int(self.ncore_blank.GetValue())
+        self.logfile.write('nchunk ='+str(self.nchunk)+'\n')
+        self.logfile.write('ncore = '+str(self.ncore)+'\n')
         print('uint16 data are ', self.data.shape, self.data.max(), self.data.min())
         # ## Normalizing the largest value to make 0 to 1.
         # self.data = (self.data / self.data.max())
@@ -750,11 +760,13 @@ class APS_13BM(wx.Frame):
                      dark=self.dark,
                      ncore = self.ncore,
                      out = self.data)
+        self.logfile.write("tp.normalize(data, flat = flat, dark = dark, ncore = ncore, out = data)\n")
         print('post tp-normalization data are ', self.data.shape, self.data.max(), self.data.min())
         ## Additional normalization using the 10 outter most air pixels.
         if self.cb == True:
             self.data = tp.normalize_bg(self.data,
                                         air = 10)
+            self.logfile.write("tp.normalize_bg(data, air = 10)\n")
             print('post background norm data are ', self.data.shape, self.data.max(), self.data.min())
         ## Allows user to pad sinogram.
         if self.pad_size != 0:
@@ -768,16 +780,20 @@ class APS_13BM(wx.Frame):
                                               axis = 2,
                                               npad =self.npad,
                                               mode = 'edge')
+                self.logfile.write("tp.misc.morph(data, axis = 2, npad = npad, mode = 'edge')\n")
         ## Delete dark field array as we no longer need it.
         del self.dark
         ## Scale data for I0 as 0.
-        self.data[np.where(self.data < 0)] = (1**-6 + self.data[np.where(self.data < 0)])
+        self.data[np.where(self.data < 0)] = 1**-6
+        self.logfile.write("data[np.where(data < 0)] = 1**-6\n")
         print('just before minus_logged data are ', self.data.shape, self.data.max(), self.data.min())
         tp.minus_log(self.data, out = self.data)
+        self.logfile.write("tp.minus_log(data, out = data)\n")
         print('minus_logged data are ', self.data.shape, self.data.max(), self.data.min())
         self.data = tp.remove_nan(self.data,
                                   val = 0.,
                                   ncore = self.ncore)
+        self.logfile.write("tp.remove_nan(data, val = 0., ncore = ncore)\n")
         print('removed nan data are ', self.data.shape, self.data.max(), self.data.min())
         self.data_max = self.data.max()
         self.data_min = self.data.min()
@@ -816,6 +832,10 @@ class APS_13BM(wx.Frame):
         lower_slice = int(self.lower_rot_slice_blank.GetValue())
         upper_center = float(self.upper_rot_center_blank.GetValue())
         lower_center = float(self.lower_rot_center_blank.GetValue())
+        self.logfile.write('upper_slice = '+str(upper_slice)+'\n')
+        self.logfile.write('lower_slice = '+str(lower_slice)+'\n')
+        self.logfile.write('upper_center= '+str(upper_center)+'\n')
+        self.logfile.write('lower_center= '+str(lower_center)+'\n')
         if self.find_center_type == 'Entropy':
             self.upper_rot_center = float(tp.find_center(self.data[upper_slice:upper_slice+1,:,:],
                                                    self.theta,
@@ -823,12 +843,14 @@ class APS_13BM(wx.Frame):
                                                    init=upper_center,
                                                    tol=tol,
                                                    sinogram_order = False))
+            self.logfile.write("float(tp.find_center(data[upper_slice:upper_slice+1,:,:], theta, ind = upper_slice, init = upper_center, tol = tol, sinogram_order = False))\n")
             self.lower_rot_center = float(tp.find_center(self.data[lower_slice:lower_slice+1,:,:],
                                                    self.theta,
                                                    ind = upper_slice,
                                                    init = lower_center,
                                                    tol = tol,
                                                    sinogram_order = False))
+            self.logfile.write("float(tp.find_center(data[lower_slice:lower_slice+1,:,:], theta, ind = lower_slice, init = lower_center, tol = tol, sinogram_order = False))\n")
             self.rot_center = (self.upper_rot_center + self.lower_rot_center) / 2
         if self.find_center_type == '0-180':
             if upper_slice > self.data.shape[2]:
@@ -844,17 +866,21 @@ class APS_13BM(wx.Frame):
             self.upper_rot_center = tp.find_center_pc(upper_proj1,
                                                       upper_proj2,
                                                       tol = tol)
+            self.logfile.write("tp.find_center_pc(upper_proj1, upper_proj2, tol = tol)\n")
             lower_proj1 = self.data[lower_slice,:,:]
             l_slice2 = (lower_slice + int(self.data.shape[0]/2)) % self.data.shape[0]
             lower_proj2 = self.data[l_slice2,:,:]
             self.lower_rot_center = tp.find_center_pc(lower_proj1,
                                                       lower_proj2,
                                                       tol = tol)
+            self.logfile.write("tp.find_center_pc(lower_proj1, lower_proj2, tol = tol)\n")
             self.rot_center = (self.upper_rot_center + self.lower_rot_center) / 2
         ## Vghia Vo works very well with 13BM data.
         if self.find_center_type == 'Vghia Vo':
             self.upper_rot_center = tp.find_center_vo(self.data[:,upper_slice:upper_slice+1,:])
+            self.logfile.write("tp.find_center_vo(data[:,upper_slice:upper_slice+1,:])\n")
             self.lower_rot_center = tp.find_center_vo(self.data[:,lower_slice:lower_slice+1,:])
+            self.logfile.write("tp.find_center_vo(data[:,lower_slice:lower_slice+1,:])\n")
             self.rot_center = (self.upper_rot_center + self.lower_rot_center) / 2
         ## Timestamping.
         t1 = time.time()
@@ -1012,7 +1038,9 @@ class APS_13BM(wx.Frame):
                              filter_name = self.filter_type,
                              ncore = self.ncore,
                              nchunk = self.nchunk)
+        self.logfile.write("tp.recon(data, theta, center = center_array, sinogram_order = False, algorithm, recon_type, filterName = filter_type, ncore = ncore, nchunk = nchunk)\n")
         self.data = tp.remove_nan(self.data)
+        self.logfile.write("tp.remove_nan(data)\n")
         print('made it through recon.', self.data.shape, type(self.data), self.data.dtype)
         self.status_ID.SetLabel('Reconstruction Complete')
         t1 = time.time()
@@ -1125,8 +1153,10 @@ class APS_13BM(wx.Frame):
         if self.npad != 0: #was padded.
             if self.data.shape [1] == self.data.shape[2]: #padded and reconstructed.
                 save_data = self.data[:,self.npad:self.data.shape[1]-self.npad,self.npad:self.data.shape[2]-self.npad]
+                self.logfile.write("save_data = data[:,npad:data.shape[1]-npad, npad:data.shape[2]-npad]\n")
             if self.data.shape[1] != self.data.shape[2]: #padded and NOT reconstructed.
                 save_data = self.data[:,:,self.npad:self.data.shape[2]-self.npad]
+                self.logfile.write("save_data = data[:,:,npad:data.shape[2]-npad]\n")
         print('starting data shape ', save_data.shape, 'type ', save_data.dtype, 'min', save_data.min(), 'max', save_data.max())
         ## Scales the data appropriately.
         ## This is extremely slow from float32 to other formats.
@@ -1160,6 +1190,9 @@ class APS_13BM(wx.Frame):
         if self.save_data_type == '.tif':
             print('Beginning saving tiffs')
             dx.write_tiff_stack(save_data, fname = self._fname, dtype = self.save_dtype, overwrite=True)
+            self.logfile.write("dx.write_tiff_stack(save_data, fname = _fname, dtype = save_dtype, overwrite = True)\n")
+            print(self.logfile)
+            self.logfile.close()
         ## Create a .volume netCDF3 file.
         ## netndf3 does not support unsigned integers.
         if self.save_data_type == '.vol':
