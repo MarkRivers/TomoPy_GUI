@@ -32,6 +32,7 @@ import time
 from optparse import OptionParser
 import scipy
 import skimage
+from .save_data import save_data
 
 from netCDF4 import Dataset
 
@@ -776,6 +777,7 @@ class APS_13BM(wx.Frame):
                 return
             else:
                 self.npad = int( (int(self.pad_size) - self.data.shape[2] ) / 2)
+                self.logfile.write('npad = '+str(self.npad))
                 self.data = tp.misc.morph.pad(self.data,
                                               axis = 2,
                                               npad =self.npad,
@@ -1028,7 +1030,10 @@ class APS_13BM(wx.Frame):
             lower_rot_center = float(lower_rot_center+self.npad)
         ## Make array of centers to reduce artifacts during reconstruction.
         center_slope = (lower_rot_center - upper_rot_center) / float(self.data.shape[0])
+        self.logfile('upper_rot_center = '+str(upper_rot_center)+'\nlower_rot_center ='+str(lower_rot_center)+'\n')
+        self.logfile('center_slope = (lower_rot_center - upper_rot_center) / float(data.shape[0])\n')
         center_array = upper_rot_center + (np.arange(self.data.shape[0])*center_slope)
+        self.logfile.write('center_array = upper_rot_center + (np.arrange(data.shape[0])*center_slope)\n')
         ## Reconstruct the data.
         self.data = tp.recon(self.data,
                              self.theta,
@@ -1093,14 +1098,17 @@ class APS_13BM(wx.Frame):
         if self.pp_filter_type == 'gaussian_filter':
             print('gaussian')
             self.data = tp.misc.corr.gaussian_filter(self.data, sigma = 3)
+            self.logfile.write('data = tp.misc.corr.gaussian_filter(data, sigma = 3)')
             print('gaussian done')
         if self.pp_filter_type == 'median_filter':
             print('median')
             self.data = tp.misc.corr.median_filter(self.data)
+            self.logfile.write('data = tp.misc.corr.median_filter(data)')
             print('median done')
         if self.pp_filter_type == 'sobel_filter':
             print('sobel')
             self.data = tp.misc.corr.sobel_filter(self.data)
+            self.logfile.write('data = tp.misc.corr.sobel_filter(data)')
             print('sobel done')
         self.status_ID.SetLabel('Data Filtered')
 
@@ -1145,75 +1153,15 @@ class APS_13BM(wx.Frame):
         if self.save_data_type == '.vol' and (self.save_dtype == 'u1' or self.save_dtype == 'u2'):
             self.status_ID.SetLabel('netCDF3 does not support unsigned images')
             return
-        ## Setup copy of data to allow user to scale and save at different file
-        ## types (e.g. 8 bit, 16 bit, etc.). Must check to see if data are padded.
-        if self.npad == 0:
-            save_data = self.data[:]
-        ## Exporting data without padding.
-        if self.npad != 0: #was padded.
-            if self.data.shape [1] == self.data.shape[2]: #padded and reconstructed.
-                save_data = self.data[:,self.npad:self.data.shape[1]-self.npad,self.npad:self.data.shape[2]-self.npad]
-                self.logfile.write("save_data = data[:,npad:data.shape[1]-npad, npad:data.shape[2]-npad]\n")
-            if self.data.shape[1] != self.data.shape[2]: #padded and NOT reconstructed.
-                save_data = self.data[:,:,self.npad:self.data.shape[2]-self.npad]
-                self.logfile.write("save_data = data[:,:,npad:data.shape[2]-npad]\n")
-        print('starting data shape ', save_data.shape, 'type ', save_data.dtype, 'min', save_data.min(), 'max', save_data.max())
-        ## Scales the data appropriately.
-        ## This is extremely slow from float32 to other formats.
-        a = float(save_data.min())
-        b = float(save_data.max()) - a
-        if self.save_dtype == 'u1':
-            save_data = ((save_data - a) / b) * 255.
-            save_data = save_data.astype(np.uint8)
-        if self.save_dtype == 'u2':
-            save_data = ((save_data - a) / b) * 65535.
-            save_data = save_data.astype(np.uint16)
-        ## This allows raw data to be saved as float32 if so desired.
-        if self.save_dtype == 'f4' and self.data.dtype=='int16':
-            print('converting int16 to float32')
-            save_data = ((save_data - a) / b)
-            save_data = save_data.astype(np.float32)
-            print('float32 data are shape ', save_data.shape, 'type ', save_data.dtype,'min', save_data.min(), 'max', save_data.max())
-        ## This allows processed data (float 32) be saved as signed integer (16 signed int) which is same as raw data.
-        if self.save_dtype =='i2' and self.data.dtype=='float32':
-            tt0 = time.time()
-            save_data = ((save_data - a) / b)
-            for i in range(save_data.shape[0]):
-                save_data[i,:,:] = skimage.img_as_int(save_data[i,:,:])
-            tt1 = time.time()
-            print('Conversion to int16 time ', tt1-tt0)
-        print('save data are ', save_data.shape, save_data.dtype, 'min', save_data.min(), 'max', save_data.max())
-        '''
-        Data exporting.
-        '''
-        ## Create tif stack within a temp folder in the current working directory.
-        if self.save_data_type == '.tif':
-            print('Beginning saving tiffs')
-            dx.write_tiff_stack(save_data, fname = self._fname, dtype = self.save_dtype, overwrite=True)
-            self.logfile.write("dx.write_tiff_stack(save_data, fname = _fname, dtype = save_dtype, overwrite = True)\n")
-            print(self.logfile)
-            self.logfile.close()
-        ## Create a .volume netCDF3 file.
-        ## netndf3 does not support unsigned integers.
-        if self.save_data_type == '.vol':
-            print('Beginning saving .vol')
-            ## Creates the empty file, and adds metadata.
-            ncfile = Dataset(self._fname+'_tomopy_recon.volume', 'w', format = 'NETCDF3_64BIT', clobber = True) # Will overwrite if pre-existing file is found.
-            ncfile.description = 'Tomography dataset'
-            ncfile.source = 'APS GSECARS 13BM'
-            ncfile.history = "Created "+time.ctime(time.time())
-            ## Creates the correct dimensions for the file.
-            NX = ncfile.createDimension('NX', save_data.shape[2])
-            NY = ncfile.createDimension('NY', save_data.shape[1])
-            NZ = ncfile.createDimension('NZ', save_data.shape[0])
-            print('save_dtype is ', self.save_dtype)
-            ## Creates variable for data based on previously constructed dimensions.
-            volume = ncfile.createVariable('VOLUME',  self.save_dtype, ('NZ','NY','NX',))
-            ## Copies data into empty file array.
-            volume[:] = save_data
-            print('volume ', volume.shape, type(volume), volume.dtype)
-            ncfile.close()
-        del save_data
+        self.logfile.write('npad = '+str(self.npad)+'\nsave_data_type ='+str(self.save_data_type)+'\n')
+        self.logfile.write('fname = '+str(self._fname)+'\n')
+        save_data(data_type = self.save_data_type,
+                save_dtype = self.save_dtype,
+                npad = self.npad,
+                data = self.data,
+                fname = self._fname)
+        self.logfile.write('save_data(data_type = save_data_type, save_dtype = save_dtype, npad = npad, data = data, fname = _fname)')
+        self.logfile.close()
         self.status_ID.SetLabel('Saving completed.')
         t1 = time.time()
         total = t1-t0
