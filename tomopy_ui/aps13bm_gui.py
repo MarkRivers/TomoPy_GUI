@@ -1155,7 +1155,7 @@ class APS_13BM(wx.Frame):
             return
         self.logfile.write('npad = '+str(self.npad)+'\nsave_data_type ='+str(self.save_data_type)+'\n')
         self.logfile.write('fname = '+str(self._fname)+'\n')
-        save_data(data_type = self.save_data_type,
+        save_recon(data_type = self.save_data_type,
                 save_dtype = self.save_dtype,
                 npad = self.npad,
                 data = self.data,
