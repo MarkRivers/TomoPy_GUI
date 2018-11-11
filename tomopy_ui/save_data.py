@@ -20,7 +20,7 @@ def save_recon(data_type, save_dtype, npad, data, fname):
 
     Parameters
     -------
-    save_data_type : str
+    data_type : str
             String of current data format.
     save_dtype : str
             String of what the save format will be.
@@ -69,11 +69,11 @@ def save_recon(data_type, save_dtype, npad, data, fname):
     Data exporting.
     '''
     ## Create tif stack within a temp folder in the current working directory.
-    if save_data_type == '.tif':
+    if data_type == '.tif':
         dx.write_tiff_stack(save_data, fname = fname, dtype = save_dtype, overwrite=True)
     ## Create a .volume netCDF3 file.
     ## netndf3 does not support unsigned integers.
-    if save_data_type == '.vol':
+    if data_type == '.vol':
         ## Creates the empty file, and adds metadata.
         ncfile = Dataset(fname+'_tomopy_recon.volume', 'w', format = 'NETCDF3_64BIT', clobber = True) # Will overwrite if pre-existing file is found.
         ncfile.description = 'Tomography dataset'
