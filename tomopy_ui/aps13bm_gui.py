@@ -493,107 +493,50 @@ class APS_13BM(wx.Frame):
     First set of methods are closely associated with the main menu bar.
     '''
     def client_read_nc(self, event):
-        '''
-        Reads in tomography data.
-        '''
-        with wx.FileDialog(self, "Select Data File", wildcard="Data files (*.nc; *.volume)|*.nc;*.volume",
-                       style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST|wx.FD_CHANGE_DIR) as fileDialog:
-            if fileDialog.ShowModal() == wx.ID_CANCEL:
-                return     # for if the user changed their mind
-            ## Setting up timestamp.
-            t0 = time.time()
-            ## Loading path and updating status label on GUI.
-            path = fileDialog.GetPath()
-            ## Opening text file to save parameters for batch reconstruction.
-            self.logfile = open('logfile.txt','w')
-            self.logfile.write('import tomopy\nimport dxchange\nimport numpy as np\n')
-            ## Loading in file that was just chosen by user.
-            try:
-                with open(path, 'r') as file:
-                    fname = file
-                    _path, _fname = os.path.split(path)
-                    self.fname1 = file
-                    self.status_ID.SetLabel('Please wait. Reading in the data.')
-                    if _fname.endswith('.nc'):
-                        '''
-                        Reading in .nc files. APS 13BM format.
-                        Reads in 2 flats (.nc), .setup, and data (.nc).
-                        '''
-                        ## Entries 1 and 3 of fname list are flat fields.
-                        ## Read in second entry (fname[1]), which houses the data.
-                        self.status_ID.SetLabel('Please wait. Reading in the data.')
-                        data, self.flat, self.dark, self.theta = dx.exchange.read_aps_13bm(_fname,format='netcdf4')
-                        self.logfile.write("data, flat, dark, theta = dx.exchange.read_aps_13bm(_fname, format='netcdf4')\n")
-                        ## Turn to float so that the next line can replace wrapped values.
-                        self.data = np.zeros(data.shape)
-                        self.data[:] = data
-                        del data
-                        self.logfile.write('data = np.zeros(data.shape)\ndata[:]=data\ndel data\n')
-                        ## Fix any wrapped values from oversaturation or file saving.
-                        self.flat[np.where(self.flat < 0)] = (2**16 + self.flat[np.where(self.flat < 0)])
-                        self.data[np.where(self.data < 0)] = (2**16 + self.data[np.where(self.data < 0)])
-                        self.logfile.write('data[np.where(data <0)] = 2**16 + data[np.where(data <0)]\nflat[np.where(flat <0)] = 2**16 + flat[np.where(flat < 0)]\n')
-                        ## Storing the dimensions for updating GUI.
-                        self.sx = self.data.shape[2]
-                        self.sy = self.data.shape[1]
-                        self.sz = self.data.shape[0]
-                        dark = self.dark[0,0,0]
-                        self.data_min = self.data.min()
-                        self.data_max = self.data.max()
-                        ## Updating the GUI.
-                        self._fname = _fname[0:-5]
-                        self.update_info(path=_path,
-                                         fname=self._fname,
-                                         sx=self.sx,
-                                         sy=self.sy,
-                                         sz=self.sz,
-                                         dark=dark,
-                                         data_max=self.data_max,
-                                         data_min=self.data_min)
-                        ## Updating the Centering Parameters Defaults for the dataset.
-                        self.upper_rot_slice_blank.SetValue(str(int(self.sz-(self.sz/4))))
-                        self.upper_rot_center_blank.SetValue(str(self.sx/2))
-                        self.lower_rot_slice_blank.SetValue(str(int(self.sz-3*(self.sz/4))))
-                        self.lower_rot_center_blank.SetValue(str(self.sx/2))
-                        self.status_ID.SetLabel('Data Imported')
-                        ## Time stamping.
-                        t1 = time.time()
-                        total = t1-t0
-                        print('Time reading in files ', total)
+          '''
+          Reads in tomography data.
+          '''
+          with wx.FileDialog(self, "Select Data File", wildcard="Data files (*.nc; *.volume)|*.nc;*.volume",
+                         style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST|wx.FD_CHANGE_DIR) as fileDialog:
+              if fileDialog.ShowModal() == wx.ID_CANCEL:
+                  return     # for if the user changed their mind
+              ## Setting up timestamp.
+              t0 = time.time()
+              ## Loading path and updating status label on GUI.
+              path = fileDialog.GetPath()
+              ## Opening text file to save parameters for batch reconstruction.
+              self.logfile = open('logfile.txt','w')
+              self.logfile.write('import tomopy\nimport dxchange\nimport numpy as np\n')
+              ## Loading in file that was just chosen by user.
+              try:
+                  with open(path, 'r') as file:
+                      fname = file
+                      _path, _fname = os.path.split(path)
+                      self.fname1 = file
+                      self.status_ID.SetLabel('Please wait. Reading in the data.')
+                      _path, self._fname, self.sx, self.sy, self.sz, self.data_max, self.data_min, self.data, self.flat, self.dark, self.theta = import_data(_fname,_path)
+                      dark = self.dark[0,0,0]
+                      self.update_info(path=_path,
+                                       fname=self._fname,
+                                       sx=self.sx,
+                                       sy=self.sy,
+                                       sz=self.sz,
+                                       dark=dark,
+                                       data_max=self.data_max,
+                                       data_min=self.data_min)
+                      ## Updating the Centering Parameters Defaults for the dataset.
+                      self.upper_rot_slice_blank.SetValue(str(int(self.sz-(self.sz/4))))
+                      self.upper_rot_center_blank.SetValue(str(self.sx/2))
+                      self.lower_rot_slice_blank.SetValue(str(int(self.sz-3*(self.sz/4))))
+                      self.lower_rot_center_blank.SetValue(str(self.sx/2))
+                      self.status_ID.SetLabel('Data Imported')
+                      ## Time stamping.
+                      t1 = time.time()
+                      total = t1-t0
+                      print('Time reading in files ', total)
 
-                    if _fname.endswith('.volume'):
-                        '''
-                        Reads in .volume files generated from tomoRecon.
-                        '''
-                        data = Dataset(_fname,'r', format = 'NETCDF4')
-                        self.data = data.variables['VOLUME'][:]
-                        data.close()
-                        # Storing angles.
-                        self.theta = tp.angles(self.data.shape[0])
-                        self.logfile.write('theta = tp.angles(data.shape[0])\n')
-                        # Storing the dimensions for updating GUI.
-                        self.sx = self.data.shape[2]
-                        self.sy = self.data.shape[1]
-                        self.sz = self.data.shape[0]
-                        ## Updating the GUI.
-                        self._fname = _fname[0:-5]
-                        self.dark = 'NA'
-                        self.data_min = self.data.min()
-                        self.data_max = self.data.max()
-                        self.update_info(path=_path,
-                            fname=self._fname,
-                            sx=self.sx, sy=self.sy,
-                            sz=self.sz,
-                            dark=self.dark,
-                            data_max=self.data_max,
-                            data_min=self.data_min)
-                        self.status_ID.SetLabel('Data Imported')
-                        ## Time stamping.
-                        t1 = time.time()
-                        total = t1-t0
-                        print('Time reading in files ', total)
-            except IOError:
-                wx.LogError("Cannot open file '%s'." % newfile)
+              except IOError:
+                  wx.LogError("Cannot open file '%s'." % newfile)
 
     def update_info(self, path=None, fname=None, sx=None, sy=None, sz=None, dark=None, data_max=None, data_min=None):
         '''
