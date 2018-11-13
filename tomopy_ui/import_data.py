@@ -6,6 +6,7 @@ import time
 import skimage
 import dxchange as dx
 from netCDF4 import Dataset
+import skimage
 
 __author__ = 'Brandt M. Gibson'
 __credits__ = 'Matt Newville, Doga Gursoy'
@@ -39,9 +40,11 @@ def import_data(fname, path):
         data = np.zeros(open_data.shape)
         data[:] = open_data
         del open_data
-        ## Fix any wrapped values from oversaturation or file saving.
-        flat[np.where(flat < 0)] = (2**16 + flat[np.where(flat < 0)])
-        data[np.where(data < 0)] = (2**16 + data[np.where(data < 0)])
+        print('data / data max are ', data.shape, data.max(), data.min())
+
+        data = data.astype(np.uint16)
+        flat = flat.astype(np.uint16)
+
         ## Storing the dimensions for updating GUI.
         sx = data.shape[2]
         sy = data.shape[1]
