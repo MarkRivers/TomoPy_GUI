@@ -33,6 +33,7 @@ from optparse import OptionParser
 import scipy
 import skimage
 from .save_data import save_recon
+from .import_data import import_data
 
 from netCDF4 import Dataset
 
@@ -515,6 +516,7 @@ class APS_13BM(wx.Frame):
                       self.fname1 = file
                       self.status_ID.SetLabel('Please wait. Reading in the data.')
                       _path, self._fname, self.sx, self.sy, self.sz, self.data_max, self.data_min, self.data, self.flat, self.dark, self.theta = import_data(_fname,_path)
+                      # If dark field current is not uniform, this will still only show the first value. 
                       dark = self.dark[0,0,0]
                       self.update_info(path=_path,
                                        fname=self._fname,
