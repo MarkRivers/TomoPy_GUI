@@ -20,6 +20,6 @@ Users will need to install the following packages.
 - conda install -c conda-forge numpy
 
 # Known issues include: 
-- Entropy centering method performs poorly for most datasets. Best to use default Vghia Vo centering method. Future updates to Entropy will come from either this UI or TomoPy.
 - Some features slower than desired (movie, data conversion, TomoPy algorithms other than gridrec).
+- Can get inf values during normalization. This is particularly prevalent when using the background (air) normalization procedure.
 
