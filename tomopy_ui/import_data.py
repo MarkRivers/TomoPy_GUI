@@ -34,17 +34,14 @@ def import_data(fname, path):
         '''
         ## Entries 1 and 3 of fname list are flat fields.
         ## Read in second entry (fname[1]), which houses the data.
-        data, flat, dark, theta = dx.exchange.read_aps_13bm(fname,format='netcdf4')
-        logfile.write("data, flat, dark, theta = dx.exchange.read_aps_13bm(fname, format='netcdf4')\n")
+        open_data, flat, dark, theta = dx.exchange.read_aps_13bm(fname,format='netcdf4')
         ## Turn to float so that the next line can replace wrapped values.
-        data = np.zeros(data.shape)
-        data[:] = data
-        del data
-        logfile.write('data = np.zeros(data.shape)\ndata[:]=data\ndel data\n')
+        data = np.zeros(open_data.shape)
+        data[:] = open_data
+        del open_data
         ## Fix any wrapped values from oversaturation or file saving.
         flat[np.where(flat < 0)] = (2**16 + flat[np.where(flat < 0)])
         data[np.where(data < 0)] = (2**16 + data[np.where(data < 0)])
-        logfile.write('data[np.where(data <0)] = 2**16 + data[np.where(data <0)]\nflat[np.where(flat <0)] = 2**16 + flat[np.where(flat < 0)]\n')
         ## Storing the dimensions for updating GUI.
         sx = data.shape[2]
         sy = data.shape[1]
@@ -64,7 +61,7 @@ def import_data(fname, path):
         data.close()
         # Storing angles.
         theta = tp.angles(data.shape[0])
-        logfile.write('theta = tp.angles(data.shape[0])\n')
+
         # Storing the dimensions for updating GUI.
         sx = data.shape[2]
         sy = data.shape[1]
@@ -74,3 +71,4 @@ def import_data(fname, path):
         dark = 'NA'
         data_min = data.min()
         data_max = data.max()
+        return
