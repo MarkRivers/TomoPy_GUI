@@ -516,7 +516,7 @@ class APS_13BM(wx.Frame):
                       self.fname1 = file
                       self.status_ID.SetLabel('Please wait. Reading in the data.')
                       _path, self._fname, self.sx, self.sy, self.sz, self.data_max, self.data_min, self.data, self.flat, self.dark, self.theta = import_data(_fname,_path)
-                      # If dark field current is not uniform, this will still only show the first value. 
+                      # If dark field current is not uniform, this will still only show the first value.
                       dark = self.dark[0,0,0]
                       self.update_info(path=_path,
                                        fname=self._fname,
@@ -685,7 +685,7 @@ class APS_13BM(wx.Frame):
     def normalization(self, event):
         '''
         Normalizes the data (1) using the flat fields and dark current,
-        then by using the air pixels on edge of sinogram.
+        then (2) by using the air pixels on edge of sinogram.
         '''
         self.status_ID.SetLabel('Preprocessing')
         ## Setting up timestamp.
@@ -693,12 +693,10 @@ class APS_13BM(wx.Frame):
         ## Pull user specified processing power.
         self.nchunk = int(self.nchunk_blank.GetValue())
         self.ncore = int(self.ncore_blank.GetValue())
+        # self.data, self.npad, self.status_ID = normalize_data(self.data, self.flat, self.dark, self.ncore, self.cb, self.pad_size)
         self.logfile.write('nchunk ='+str(self.nchunk)+'\n')
         self.logfile.write('ncore = '+str(self.ncore)+'\n')
         print('uint16 data are ', self.data.shape, self.data.max(), self.data.min())
-        # ## Normalizing the largest value to make 0 to 1.
-        # self.data = (self.data / self.data.max())
-        print('data / data max are ', self.data.shape, self.data.max(), self.data.min())
         ## Normalize via flats and darks.
         ## First normalization using flats and dark current.
         tp.normalize(self.data,
@@ -708,6 +706,9 @@ class APS_13BM(wx.Frame):
                      out = self.data)
         self.logfile.write("tp.normalize(data, flat = flat, dark = dark, ncore = ncore, out = data)\n")
         print('post tp-normalization data are ', self.data.shape, self.data.max(), self.data.min())
+        # ## Normalizing the largest value to make 0 to 1.
+        # self.data = (self.data / self.data.max())
+        print('data / data max are ', self.data.shape, self.data.max(), self.data.min())
         ## Additional normalization using the 10 outter most air pixels.
         if self.cb == True:
             self.data = tp.normalize_bg(self.data,
@@ -730,7 +731,7 @@ class APS_13BM(wx.Frame):
                 self.logfile.write("tp.misc.morph(data, axis = 2, npad = npad, mode = 'edge')\n")
         ## Delete dark field array as we no longer need it.
         del self.dark
-        ## Scale data for I0 as 0.
+        ## Scale data for I0 should be 0. This is done to not take minus_log of 0.
         self.data[np.where(self.data < 0)] = 1**-6
         self.logfile.write("data[np.where(data < 0)] = 1**-6\n")
         print('just before minus_logged data are ', self.data.shape, self.data.max(), self.data.min())
@@ -742,9 +743,9 @@ class APS_13BM(wx.Frame):
                                   ncore = self.ncore)
         self.logfile.write("tp.remove_nan(data, val = 0., ncore = ncore)\n")
         print('removed nan data are ', self.data.shape, self.data.max(), self.data.min())
+        ## Updates GUI. Variables set to None don't update in self.update_info method.
         self.data_max = self.data.max()
         self.data_min = self.data.min()
-        ## Updates GUI. Variables set to None don't update in self.update_info methods
         path = None
         dark = None
         fname = None
@@ -761,7 +762,7 @@ class APS_13BM(wx.Frame):
         ## Timestamping.
         t1 = time.time()
         total = t1-t0
-        print('data dimensions ',self.data.shape, type(self.data), self.data.dtype, 'min ', self.data.min(), 'max', self.data.max())
+        print('data dimensions ',self.data.shape, self.data.dtype, 'max', self.data.max(),'min ', self.data.min())
         print('Normalization time was ', total)
 
     def find_rot_center(self, event=None):
