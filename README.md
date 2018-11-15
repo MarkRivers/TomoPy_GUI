@@ -4,6 +4,13 @@ TomoPy_GUI is a simple interface for reconstructing synchrotron tomography datas
 Currently, this UI is optimized for APS 13-BM netcdf datasets, but future interations will expand to accommodate data formats.  
 More information about TomoPy can be found at https://github.com/tomopy/tomopy.  
 
+# Installing
+Download and extract the TomoPy_GUI directory.  
+Via command line (ex. Anaconda) navigate to the downloaded directory.  
+run "python setup.py install"  
+An icon should appear on the desktop. To view command line print statements, navigate to the Scripts folder of your python path via cmd line, and run 
+"tomopy_13bmapp-script.pyw".
+
 # Dependencies
 Users will need to install the following packages.
 - conda install -c dgursoy tomopy
@@ -20,6 +27,7 @@ Users will need to install the following packages.
 - conda install -c conda-forge numpy
 
 # Known issues include: 
-- Entropy centering method performs poorly for most datasets. Best to use default Vghia Vo centering method. Future updates to Entropy will come from either this UI or TomoPy.
+- Converting from int16 to uint16
 - Some features slower than desired (movie, data conversion, TomoPy algorithms other than gridrec).
+- Can get inf values during normalization. This is particularly prevalent when using the background (air) normalization procedure.
 
