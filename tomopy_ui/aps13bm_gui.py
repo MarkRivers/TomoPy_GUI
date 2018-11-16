@@ -120,7 +120,7 @@ class APS_13BM(wx.Frame):
         self.bg_cb = wx.CheckBox(self.panel, label = 'Additional Air Normalization', size = (-1,-1))
         self.bg_cb.Bind(wx.EVT_CHECKBOX, self.onChecked)
         self.bg_cb.SetValue(True)
-        ## Allow user to specify kernel size for ring removal
+        ## Allow user to specify kernel size for ring removal, default will be 9 until changed by user.
         ring_width_label = wx.StaticText(self.panel, label = 'Ring Kernel Width: ', size = (-1,-1))
         self.ring_width_blank = wx.TextCtrl(self.panel, value = '9')
         self.ring_width = 9
@@ -268,7 +268,6 @@ class APS_13BM(wx.Frame):
         self.save_dtype = 'f4'
         self.save_dtype_list = [
                 '8 bit unsigned', #u1
-                '16 bit signed', #i2
                 '16 bit unsigned', #u2
                 '32 bit float'#f4
                 ]

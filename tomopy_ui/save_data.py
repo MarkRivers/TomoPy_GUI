@@ -56,12 +56,8 @@ def save_recon(data_type, save_dtype, npad, data, fname):
     if save_dtype == 'u2':
         save_data = ((save_data - a) / b) * 65535.
         save_data = save_data.astype(np.uint16)
-    ## This allows raw data to be saved as float32 if so desired.
-    if save_dtype == 'f4' and data.dtype=='int16':
-        save_data = ((save_data - a) / b)
-        save_data = save_data.astype(np.float32)
     ## This allows processed data (float 32) be saved as signed integer (16 signed int) which is same as raw data.
-    if save_dtype =='i2' and data.dtype=='float32':
+    if save_dtype =='u2' and data.dtype=='float32':
         save_data = ((save_data - a) / b)
         for i in range(save_data.shape[0]):
             save_data[i,:,:] = skimage.img_as_int(save_data[i,:,:])
