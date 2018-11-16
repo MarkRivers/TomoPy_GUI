@@ -686,6 +686,9 @@ class APS_13BM(wx.Frame):
         '''
         Normalizes the data (1) using the flat fields and dark current,
         then (2) by using the air pixels on edge of sinogram.
+
+        In the works is to have this all done externally. That script is already written, but needs a method
+        for passing the UI info updates.
         '''
         self.status_ID.SetLabel('Preprocessing')
         ## Setting up timestamp.
@@ -772,6 +775,8 @@ class APS_13BM(wx.Frame):
         t0 = time.time()
         ## Tolerance used for TomoPy centering algorithms.
         tol = float(self.tol_blank.GetValue())
+
+        ## These are the user inputs from single slice recon.
         upper_slice = int(self.upper_rot_slice_blank.GetValue())
         lower_slice = int(self.lower_rot_slice_blank.GetValue())
         upper_center = float(self.upper_rot_center_blank.GetValue())
@@ -780,6 +785,11 @@ class APS_13BM(wx.Frame):
         self.logfile.write('lower_slice = '+str(lower_slice)+'\n')
         self.logfile.write('upper_center= '+str(upper_center)+'\n')
         self.logfile.write('lower_center= '+str(lower_center)+'\n')
+
+        '''
+        TomoPy uses three possible centering methods. The Vghia Vo by far seems to
+        perform best.
+        '''
         if self.find_center_type == 'Entropy':
             self.upper_rot_center = float(tp.find_center(self.data[upper_slice:upper_slice+1,:,:],
                                                    self.theta,
@@ -804,8 +814,10 @@ class APS_13BM(wx.Frame):
                 self.status_ID.SetLabel('Lower slice out of range.')
                 return
             upper_proj1 = self.data[upper_slice,:,:]
+
             ## This finds the slice at 180 from the input slice.
             u_slice2 = (upper_slice + int(self.data.shape[0]/2)) % self.data.shape[0]
+
             upper_proj2 = self.data[u_slice2,:,:]
             self.upper_rot_center = tp.find_center_pc(upper_proj1,
                                                       upper_proj2,
@@ -819,27 +831,29 @@ class APS_13BM(wx.Frame):
                                                       tol = tol)
             self.logfile.write("tp.find_center_pc(lower_proj1, lower_proj2, tol = tol)\n")
             self.rot_center = (self.upper_rot_center + self.lower_rot_center) / 2
-        ## Vghia Vo works very well with 13BM data.
+
         if self.find_center_type == 'Vghia Vo':
             self.upper_rot_center = tp.find_center_vo(self.data[:,upper_slice:upper_slice+1,:])
             self.logfile.write("tp.find_center_vo(data[:,upper_slice:upper_slice+1,:])\n")
             self.lower_rot_center = tp.find_center_vo(self.data[:,lower_slice:lower_slice+1,:])
             self.logfile.write("tp.find_center_vo(data[:,lower_slice:lower_slice+1,:])\n")
             self.rot_center = (self.upper_rot_center + self.lower_rot_center) / 2
+
         ## Timestamping.
         t1 = time.time()
         total = t1-t0
         print('Time to find center was ', total)
         self.status_ID.SetLabel('Rotation Center found.')
         print('success, rot center is ', self.rot_center)
-        ## Updating the GUI for the calculated values.
 
+        ## Updating the GUI for the calculated values.
         self.upper_rot_center_blank.SetLabel(str((self.upper_rot_center-self.npad)))
         self.lower_rot_center_blank.SetLabel(str((self.lower_rot_center-self.npad)))
 
     def up_recon_slice (self, event):
         '''
-        Slice reconstruction methods.
+        Upper slice reconstruction method. Any adjustment to the recon method will
+        likely also need to be done to the single slice reocon methods.
         '''
         self.status_ID.SetLabel('Reconstructing slice.')
         t0 = time.time()
@@ -861,7 +875,8 @@ class APS_13BM(wx.Frame):
 
     def lower_recon_slice (self, event):
         '''
-        Slice reconstruction methods.
+        Lower slice reconstruction method. Any adjustment to the recon method will
+        likely also need to be done to the single slice reocon methods.
         '''
         self.status_ID.SetLabel('Reconstructing slice.')
         t0 = time.time()
@@ -888,7 +903,8 @@ class APS_13BM(wx.Frame):
 
     def OnReconCombo(self, event):
         '''
-        Sets the reconstruction type if changed from default.
+        Sets the reconstruction type if changed from default (gridrec). Most of these
+        are very computationally intensive and quite slow.
         '''
         self.recon_type = self.recon_menu.GetStringSelection()
         if self.recon_type == 'Algebraic':
@@ -927,12 +943,10 @@ class APS_13BM(wx.Frame):
 
     def tilt_correction(self, event):
         '''
-        Corrects raw data upper and lower centers do not match.
-        Currently this needs to be fixed. Tilt corrected data
-        unable to reconstruct after this step.
+        This will need to be updated in the future once TomoPy implements their own
+        version. For now this is a temporary solution.
         '''
         ## This did not come from TomoPy because TomoPy has yet to implement.
-        ## This also appears to be returning an array that plotting can't work with.
         self.status_ID.SetLabel('Correcting Tilt')
         ## Setting up timestamp.
         t0 = time.time()
@@ -946,7 +960,7 @@ class APS_13BM(wx.Frame):
         for i in range(nangles-1):
             projection = self.data[i,:,:]
             r = scipy.ndimage.rotate(projection, angle)
-            self.data[i,:,:] = r #might need to remove the float from here. Could be breaking it. Integer?
+            self.data[i,:,:] = r
         t1 = time.time()
         print('Time to tilt ', t1-t0)
         print('New dimnsions are ', self.data.shape, 'Data type is', type(self.data), 'dtype is ', self.data.dtype)
@@ -971,9 +985,11 @@ class APS_13BM(wx.Frame):
             upper_rot_center = float(upper_rot_center+self.npad)
             lower_rot_center = float(lower_rot_center+self.npad)
         ## Make array of centers to reduce artifacts during reconstruction.
+        ## This works by calculating the slope between centers and interpolates.
         center_slope = (lower_rot_center - upper_rot_center) / float(self.data.shape[0])
         center_array = upper_rot_center + (np.arange(self.data.shape[0])*center_slope)
-        ## Reconstruct the data.
+
+        ## Reconstruct the data. Using nchunk causes aritfacts within the reconstruction.
         self.data = tp.recon(self.data,
                              self.theta,
                              center = center_array,
@@ -1053,15 +1069,13 @@ class APS_13BM(wx.Frame):
 
     def OnSaveDtypeCombo (self, event):
         '''
-        Data export parameters. All data are exported as intergers with choice of
-        8 bit, 16 bit, or 32 bit.
+        Data export parameters. User choses 8 bit, 16 bit, or 32 bit.
+        Currently float is only in 32 bit, and user cannot make 32 bit
+        integer exports.
         '''
         self.save_dtype = self.save_dtype_menu.GetStringSelection()
         if self.save_dtype == '8 bit unsigned':
             self.save_dtype = 'u1'
-            print('data type changed to ', self.save_dtype)
-        if self.save_dtype == '16 bit signed':
-            self.save_dtype = 'i2'
             print('data type changed to ', self.save_dtype)
         if self.save_dtype == '16 bit unsigned':
             self.save_dtype = 'u2'
@@ -1143,17 +1157,17 @@ class APS_13BM(wx.Frame):
         Plot view depends on Data Visualization view option and slice.
         Defaults to an additional hanning filter.
         Defaults to gray scale reversed so that bright corresponds to higher
-        density.
+        density. Temp object d_data is created so that slice view can be accomplished.
         '''
         if self.data is None:   # no data loaded by user.
             return
         ## Calls plotting frame.
         image_frame = ImageFrame(self)
         try:
-            ## Look for slice to display.
+            ## Look for slice (self.z) to display.
             self.z = self.z_dlg.GetValue()
             z = int(self.z)
-            print('read in z and plot_type.', self.z)
+            print('read in slice and plot_type.', self.z)
 
         except ValueError:
             print(" cannot read z from Entry ", self.z)

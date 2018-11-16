@@ -36,12 +36,14 @@ def import_data(fname, path):
         ## Entries 1 and 3 of fname list are flat fields. Dxchange knows how to properly handle this.
         ## Will break if missing a flat or setup file.
         open_data, flat, dark, theta = dx.exchange.read_aps_13bm(fname,format='netcdf4')
-        ## Turn to float so that the next line can replace wrapped values.
+        ## nc files don't properly close due to Python still pointing to the files.
+        ## Create array and replace contents to allow Python to close original file.
         data = np.zeros(open_data.shape)
         data[:] = open_data
         del open_data
         print('data / data max are ', data.shape, data.max(), data.min())
 
+        ## Let Python know data are unsigned 16 bit integers.
         data = data.astype(np.uint16)
         flat = flat.astype(np.uint16)
 
@@ -55,6 +57,9 @@ def import_data(fname, path):
         fname = fname[0:-5]
         return path, fname, sx, sy, sz, data_max, data_min, data, flat, dark, theta
 
+        '''
+        Everything beneath here has not been implemented in the master branch or cmd branch.
+        '''
     if _fname.endswith('.h5') and beamline == 'ALS 8.3.2':
         start = 0
         end = 16
