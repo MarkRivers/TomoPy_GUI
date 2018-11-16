@@ -513,6 +513,7 @@ class APS_13BM(wx.Frame):
                   with open(path, 'r') as file:
                       fname = file
                       _path, _fname = os.path.split(path)
+                      os.chdir(_path)
                       self.fname1 = file
                       self.status_ID.SetLabel('Please wait. Reading in the data.')
                       _path, self._fname, self.sx, self.sy, self.sz, self.data_max, self.data_min, self.data, self.flat, self.dark, self.theta = import_data(_fname,_path)
