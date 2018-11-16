@@ -28,11 +28,10 @@ def normalize_data(data, flat, dark, ncore, cb, pad_size):
     '''
     ## Normalize via flats and darks.
     ## First normalization using flats and dark current.
-    tp.normalize(data,
+    data = tp.normalize(data,
                  flat=flat,
                  dark=dark,
-                 ncore = ncore,
-                 out = data)
+                 ncore = ncore)
 
     ## Additional normalization using the 10 outter most air pixels.
     ## Should eventually add an option for specifying how many air pixels.
