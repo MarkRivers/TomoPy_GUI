@@ -232,8 +232,8 @@ class APS_13BM(wx.Frame):
         self.data_max_ID = wx.StaticText(self.panel, label = '          ')
 
         ## Initializes data visualization parameters. Defaults to slice view.
-        self.plot_type = 'Z View'
-        plot_view_list = ['Z View','Y View', 'X View']
+        self.plot_type = 'Z Slice'
+        plot_view_list = ['Z Slice','Y Sinogram', 'X Sinogram']
         self.visualization_box = wx.RadioBox(self.panel, label = 'Data Visuzalization', choices = plot_view_list, style = wx.RA_SPECIFY_COLS)
         self.visualization_box.Bind(wx.EVT_RADIOBOX, self.OnRadiobox)
         self.z_lble = wx.StaticText(self.panel, label = 'Slice to view: ')
@@ -288,8 +288,8 @@ class APS_13BM(wx.Frame):
         ## Computation Options panel
         comp_opt_title = wx.StaticText(self.panel, -1, label = 'Computation Options', size = (-1,-1))
         ncores_label = wx.StaticText(self.panel, -1, label = 'Number of Cores:', size = (-1,-1))
-        self.ncore_blank = wx.TextCtrl(self.panel, value = '12')
-        self.ncore = 12
+        self.ncore_blank = wx.TextCtrl(self.panel, value = '4')
+        self.ncore = 4
         nchunks_label = wx.StaticText(self.panel, -1, label = '  Number of Chunks: ', size = (-1,-1))
         self.nchunk_blank = wx.TextCtrl(self.panel, -1, value = '128')
         self.nchunk = 128
@@ -980,8 +980,8 @@ class APS_13BM(wx.Frame):
                              sinogram_order = False,
                              algorithm = self.recon_type,
                              filter_name = self.filter_type,
-                             ncore = self.ncore)
-                            # nchunk = self.nchunk)
+                             ncore = self.ncore,
+                             nchunk = self.nchunk)
         self.logfile.write("tp.recon(data, theta, center = center_array, sinogram_order = False, algorithm, recon_type, filterName = filter_type, ncore = ncore, nchunk = nchunk)\n")
         self.data = tp.remove_nan(self.data)
         self.logfile.write("tp.remove_nan(data)\n")
@@ -1167,13 +1167,10 @@ class APS_13BM(wx.Frame):
         ## Plot according to the users input. Default is slice view.
         if self.plot_type.startswith('Z'): #  Slice':
             d_data = self.data[z, ::-1, :]
-            print(d_data.shape)
         if self.plot_type.startswith('Y'): #  Sinogram':
             d_data = self.data[::-1,  z, :]
-            print(d_data.shape)
         if self.plot_type.startswith('X'): #  Sinogram':
-            d_data = self.data[:, ::-1, z]
-            print(d_data.shape)
+            d_data = self.data[::-1, :, z]
         ## Setting up parameters and plotting.
         if d_data is not None:
             image_frame.panel.conf.interp = 'hanning'
