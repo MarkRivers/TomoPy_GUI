@@ -446,9 +446,9 @@ class APS_13BM(wx.Frame):
         leftSizer.Add(preprocessing_title_Sizer, 0, wx.ALL|wx.EXPAND,5)
         leftSizer.Add(preprocessing_panel_Sizer, 0, wx.EXPAND, 10)
         leftSizer.Add(preprocessing_pad_Sizer, 0, wx.EXPAND,5)
+        leftSizer.Add(preprocessing_ring_width_Sizer, 0, wx.EXPAND, 5)
         leftSizer.Add(preprocessing_zinger_Sizer, 0, wx.EXPAND, 5)
         leftSizer.Add(preprocessing_preprocess_button_Sizer, 0, wx.EXPAND, 5)
-        leftSizer.Add(preprocessing_ring_width_Sizer, 0, wx.EXPAND, 5)
         leftSizer.Add(wx.StaticLine(self.panel),0,wx.ALL|wx.EXPAND, 5)
         leftSizer.Add(centering_title_Sizer, 0, wx.ALL|wx.EXPAND, 5)
         leftSizer.Add(recon_upper_center_Sizer, 0, wx.ALL|wx.EXPAND, 5)
@@ -527,9 +527,9 @@ class APS_13BM(wx.Frame):
                                        data_max=self.data_max,
                                        data_min=self.data_min)
                       ## Updating the Centering Parameters Defaults for the dataset.
-                      self.lower_rot_slice_blank.SetValue(str(int(self.sz-(self.sz/4))))
+                      self.upper_rot_slice_blank.SetValue(str(int(self.sz-(self.sz/4))))
                       self.upper_rot_center_blank.SetValue(str(self.sx/2))
-                      self.upper_rot_slice_blank.SetValue(str(int(self.sz-3*(self.sz/4))))
+                      self.lower_rot_slice_blank.SetValue(str(int(self.sz-3*(self.sz/4))))
                       self.lower_rot_center_blank.SetValue(str(self.sx/2))
                       self.status_ID.SetLabel('Data Imported')
                       ## Time stamping.
@@ -699,12 +699,16 @@ class APS_13BM(wx.Frame):
         print('uint16 data are ', self.data.shape, self.data.max(), self.data.min())
         ## Normalize via flats and darks.
         ## First normalization using flats and dark current.
-        self.data = tp.normalize(self.data,
+        tp.normalize(self.data,
                      flat=self.flat,
                      dark=self.dark,
-                     ncore = self.ncore)
+                     ncore = self.ncore,
+                     out = self.data)
         self.logfile.write("tp.normalize(data, flat = flat, dark = dark, ncore = ncore, out = data)\n")
         print('post tp-normalization data are ', self.data.shape, self.data.max(), self.data.min())
+        # ## Normalizing the largest value to make 0 to 1.
+        # self.data = (self.data / self.data.max())
+        print('data / data max are ', self.data.shape, self.data.max(), self.data.min())
         ## Additional normalization using the 10 outter most air pixels.
         if self.cb == True:
             self.data = tp.normalize_bg(self.data,
@@ -972,7 +976,10 @@ class APS_13BM(wx.Frame):
             lower_rot_center = float(lower_rot_center+self.npad)
         ## Make array of centers to reduce artifacts during reconstruction.
         center_slope = (lower_rot_center - upper_rot_center) / float(self.data.shape[0])
+        self.logfile('upper_rot_center = '+str(upper_rot_center)+'\nlower_rot_center ='+str(lower_rot_center)+'\n')
+        self.logfile('center_slope = (lower_rot_center - upper_rot_center) / float(data.shape[0])\n')
         center_array = upper_rot_center + (np.arange(self.data.shape[0])*center_slope)
+        self.logfile.write('center_array = upper_rot_center + (np.arrange(data.shape[0])*center_slope)\n')
         ## Reconstruct the data.
         self.data = tp.recon(self.data,
                              self.theta,
