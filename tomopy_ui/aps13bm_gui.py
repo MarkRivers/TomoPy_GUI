@@ -155,12 +155,12 @@ class APS_13BM(wx.Frame):
         rot_center_button = wx.Button(self.panel, -1, label = 'Optimize Center', size = (-1,-1))
         rot_center_button.Bind(wx.EVT_BUTTON, self.find_rot_center)
         center_method_title = wx.StaticText(self.panel, -1, label = 'Centering Method:', size = (-1,-1))
-        self.find_center_type = 'Vghia Vo'
+        self.find_center_type = 'Nghia Vo'
         find_center_list = [
                 'Entropy',
-				'Vghia Vo',
+				'Nghia Vo',
                 '0-180']
-        self.find_center_menu = wx.ComboBox(self.panel, value = 'Vghia Vo', choices = find_center_list)
+        self.find_center_menu = wx.ComboBox(self.panel, value = 'Nghia Vo', choices = find_center_list)
         self.find_center_menu.Bind(wx.EVT_COMBOBOX, self.find_center_algo_type)
         tol_title = wx.StaticText(self.panel, -1, label = '       Tolerance: ')
         self.tol_blank = wx.TextCtrl(self.panel, value = '0.25', size = (100,-1))
@@ -787,7 +787,7 @@ class APS_13BM(wx.Frame):
         self.logfile.write('lower_center= '+str(lower_center)+'\n')
 
         '''
-        TomoPy uses three possible centering methods. The Vghia Vo by far seems to
+        TomoPy uses three possible centering methods. The Nghia Vo by far seems to
         perform best.
         '''
         if self.find_center_type == 'Entropy':
@@ -832,7 +832,7 @@ class APS_13BM(wx.Frame):
             self.logfile.write("tp.find_center_pc(lower_proj1, lower_proj2, tol = tol)\n")
             self.rot_center = (self.upper_rot_center + self.lower_rot_center) / 2
 
-        if self.find_center_type == 'Vghia Vo':
+        if self.find_center_type == 'Nghia Vo':
             self.upper_rot_center = tp.find_center_vo(self.data[:,upper_slice:upper_slice+1,:])
             self.logfile.write("tp.find_center_vo(data[:,upper_slice:upper_slice+1,:])\n")
             self.lower_rot_center = tp.find_center_vo(self.data[:,lower_slice:lower_slice+1,:])
